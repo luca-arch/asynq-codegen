@@ -141,6 +141,7 @@ linters:
           - cyclop
           - dupl
           - err113
+          - errcheck
           - exhaustruct
           - forcetypeassert
           - funlen

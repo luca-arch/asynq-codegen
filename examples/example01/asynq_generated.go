@@ -28,7 +28,7 @@ type asynqClient interface {
 
 type asynqMux interface {
 	// HandleFunc is https://pkg.go.dev/github.com/hibiken/asynq#ServeMux.HandleFunc.
-	HandleFunc(string, asynq.HandlerFunc)
+	HandleFunc(string, func(context.Context, *asynq.Task) error)
 }
 
 // SendEmailProcessor describes a function that processes [SendEmail].
@@ -202,7 +202,7 @@ func NewSendSMSTask(t *SendSMS) (*asynq.Task, error) {
 //   - it will return any received error as-is, including [asynq.SkipRetry] and [asynq.RevokeTask].
 //
 // This function is auto-generated.
-func NewSendEmailProcessor(fn SendEmailProcessor) asynq.HandlerFunc {
+func NewSendEmailProcessor(fn SendEmailProcessor) func(context.Context, *asynq.Task) error {
 	return func(ctx context.Context, task *asynq.Task) error {
 		if task == nil {
 			return fmt.Errorf("SendEmailProcessor invoked with nil task")
@@ -237,7 +237,7 @@ func NewSendEmailProcessor(fn SendEmailProcessor) asynq.HandlerFunc {
 //   - it will return any received error as-is, including [asynq.SkipRetry] and [asynq.RevokeTask].
 //
 // This function is auto-generated.
-func NewSendSMSProcessor(fn SendSMSProcessor) asynq.HandlerFunc {
+func NewSendSMSProcessor(fn SendSMSProcessor) func(context.Context, *asynq.Task) error {
 	return func(ctx context.Context, task *asynq.Task) error {
 		if task == nil {
 			return fmt.Errorf("SendSMSProcessor invoked with nil task")

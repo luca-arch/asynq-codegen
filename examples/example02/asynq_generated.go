@@ -26,7 +26,7 @@ type asynqClient interface {
 
 type asynqMux interface {
 	// HandleFunc is https://pkg.go.dev/github.com/hibiken/asynq#ServeMux.HandleFunc.
-	HandleFunc(string, asynq.HandlerFunc)
+	HandleFunc(string, func(context.Context, *asynq.Task) error)
 }
 
 // ExampleTaskProcessor describes a function that processes [ExampleTask].
@@ -126,7 +126,7 @@ func NewExampleTaskTask(t *ExampleTask) (*asynq.Task, error) {
 //   - it will return any received error as-is, including [asynq.SkipRetry] and [asynq.RevokeTask].
 //
 // This function is auto-generated.
-func NewExampleTaskProcessor(fn ExampleTaskProcessor) asynq.HandlerFunc {
+func NewExampleTaskProcessor(fn ExampleTaskProcessor) func(context.Context, *asynq.Task) error {
 	return func(ctx context.Context, task *asynq.Task) error {
 		if task == nil {
 			return fmt.Errorf("ExampleTaskProcessor invoked with nil task")
