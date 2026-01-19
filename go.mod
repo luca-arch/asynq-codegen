@@ -1,4 +1,4 @@
-module github.com/luca-arch/async-codegen
+module github.com/luca-arch/asynq-codegen
 
 go 1.25
 
