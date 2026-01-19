@@ -5,7 +5,7 @@ import (
 	"log/slog"
 	"os"
 
-	asynqcodegen "github.com/luca-arch/async-codegen/asynq-codegen"
+	asynqcodegen "github.com/luca-arch/asynq-codegen/asynq-codegen"
 )
 
 func main() {
