@@ -96,6 +96,7 @@ func NewExampleTaskFromJSONBytes(b []byte) (*ExampleTask, error) {
 // Task's options:
 //
 //   - Max retries: 1
+//   - Retention: 24h0m0s
 //   - Timeout: 10s
 //
 // This function is auto-generated.
@@ -113,6 +114,7 @@ func NewExampleTaskTask(t *ExampleTask) (*asynq.Task, error) {
 		TypeExampleTask,
 		payload,
 		asynq.MaxRetry(1),
+		asynq.Retention(86400000*time.Millisecond),
 		asynq.Timeout(10000*time.Millisecond),
 	), nil
 }
@@ -121,9 +123,9 @@ func NewExampleTaskTask(t *ExampleTask) (*asynq.Task, error) {
 // to [asynq.ServeMux.Handle] and [asynq.ServeMux.HandleFunc].
 //
 // Notes about the returned function:
-//   - it will reject nil tasks and tasks of which the typename does not match [TypeExampleTask].
-//   - it will return an error if a task's payload cannot be unmarshalled.
-//   - it will return any received error as-is, including [asynq.SkipRetry] and [asynq.RevokeTask].
+//     - it will reject nil tasks and tasks of which the typename does not match [TypeExampleTask].
+//     - it will return an error if a task's payload cannot be unmarshalled.
+//     - it will return any received error as-is, including [asynq.SkipRetry] and [asynq.RevokeTask].
 //
 // This function is auto-generated.
 func NewExampleTaskProcessor(fn ExampleTaskProcessor) func(context.Context, *asynq.Task) error {

@@ -96,7 +96,7 @@ task, info, err := EnqueueSendEmailContext(ctx, client, &SendEmail{
 })
 ```
 
-In the above example, `EnqueueSendEmailContext` accepts additional `asynq.Option` arguments to allow overriding the auto-generated ones. 
+In the above example, `EnqueueSendEmailContext` accepts additional `asynq.Option` arguments to allow overriding the auto-generated ones.
 
 ### Register task processors
 
@@ -130,7 +130,7 @@ mux.HandleFunc(
     TypeSendEmail,
     NewSendEmailProcessor(func(_ context.Context, msg *SendEmail) error {
         log.Println("sending email to:", msg.To)
-        
+
         return nil
     }),
 )
@@ -151,6 +151,14 @@ Directives are read from struct doc comments, and are all optional: only one `as
 This directive marks a struct as an Asynq task and controls the generated task name.
 
 If no value is provided, the struct name is converted to snake case.
+
+### `asynq:retention`
+
+```
+// asynq:retention 7d
+```
+
+Directive for [asynq.Retention](https://github.com/hibiken/asynq/wiki/Task-Retention-and-Result), defaults to **24 hours**.
 
 ### `asynq:retry`
 
@@ -180,7 +188,7 @@ to discuss the design.
 ### Local development notes
 
 - Lint files with `golangci-lint run --fix ./...`
-- Generate example files with `go generate ./...` 
+- Generate example files with `go generate ./...`
 - Use [gitmoji](https://gitmoji.dev/)!
 
 ---

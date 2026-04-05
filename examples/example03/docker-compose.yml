@@ -1,0 +1,19 @@
+services:
+  consumer:
+    command: consumer
+    restart: no
+    build:
+      context: .
+    depends_on:
+      - redis
+
+  producer:
+    command: producer
+    restart: no
+    build:
+      context: .
+    depends_on:
+      - redis
+
+  redis:
+    image: redis:8.4-alpine
