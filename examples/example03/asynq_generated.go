@@ -114,6 +114,7 @@ func NewTask01FromJSONBytes(b []byte) (*Task01, error) {
 // Task's options:
 //
 //   - Max retries: 5
+//   - Retention: 24h0m0s
 //   - Timeout: 1m0s
 //
 // This function is auto-generated.
@@ -131,6 +132,7 @@ func NewTask01Task(t *Task01) (*asynq.Task, error) {
 		TypeTask01,
 		payload,
 		asynq.MaxRetry(5),
+		asynq.Retention(86400000*time.Millisecond),
 		asynq.Timeout(60000*time.Millisecond),
 	), nil
 }
@@ -172,6 +174,7 @@ func NewTask02FromJSONBytes(b []byte) (*Task02, error) {
 // Task's options:
 //
 //   - Max retries: 5
+//   - Retention: 24h0m0s
 //   - Timeout: 1m0s
 //
 // This function is auto-generated.
@@ -189,6 +192,7 @@ func NewTask02Task(t *Task02) (*asynq.Task, error) {
 		TypeTask02,
 		payload,
 		asynq.MaxRetry(5),
+		asynq.Retention(86400000*time.Millisecond),
 		asynq.Timeout(60000*time.Millisecond),
 	), nil
 }

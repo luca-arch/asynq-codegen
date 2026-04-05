@@ -112,6 +112,7 @@ func New{{ .StructName }}FromJSONBytes(b []byte) (*{{ .StructName }}, error) {
 // Task's options:
 //
 //    - Max retries: {{ .Retry }}
+//    - Retention: {{ .Retention.String }}
 //    - Timeout: {{ .Timeout.String }}
 //
 // This function is auto-generated.
@@ -129,6 +130,7 @@ func New{{ .StructName }}Task(t *{{ .StructName }}) (*asynq.Task, error) {
         Type{{ .StructName }},
         payload,
         asynq.MaxRetry({{ .Retry }}),
+        asynq.Retention({{ .Retention.Milliseconds }} * time.Millisecond),
         asynq.Timeout({{ .Timeout.Milliseconds }} * time.Millisecond),
     ), nil
 }

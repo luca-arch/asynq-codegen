@@ -114,6 +114,7 @@ func NewSendEmailFromJSONBytes(b []byte) (*SendEmail, error) {
 // Task's options:
 //
 //   - Max retries: 5
+//   - Retention: 24h0m0s
 //   - Timeout: 1m0s
 //
 // This function is auto-generated.
@@ -131,6 +132,7 @@ func NewSendEmailTask(t *SendEmail) (*asynq.Task, error) {
 		TypeSendEmail,
 		payload,
 		asynq.MaxRetry(5),
+		asynq.Retention(86400000*time.Millisecond),
 		asynq.Timeout(60000*time.Millisecond),
 	), nil
 }
@@ -172,6 +174,7 @@ func NewSendSMSFromJSONBytes(b []byte) (*SendSMS, error) {
 // Task's options:
 //
 //   - Max retries: 5
+//   - Retention: 24h0m0s
 //   - Timeout: 1m0s
 //
 // This function is auto-generated.
@@ -189,6 +192,7 @@ func NewSendSMSTask(t *SendSMS) (*asynq.Task, error) {
 		TypeSendSMS,
 		payload,
 		asynq.MaxRetry(5),
+		asynq.Retention(86400000*time.Millisecond),
 		asynq.Timeout(60000*time.Millisecond),
 	), nil
 }
