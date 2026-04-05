@@ -197,9 +197,9 @@ func NewSendSMSTask(t *SendSMS) (*asynq.Task, error) {
 // to [asynq.ServeMux.Handle] and [asynq.ServeMux.HandleFunc].
 //
 // Notes about the returned function:
-//   - it will reject nil tasks and tasks of which the typename does not match [TypeSendEmail].
-//   - it will return an error if a task's payload cannot be unmarshalled.
-//   - it will return any received error as-is, including [asynq.SkipRetry] and [asynq.RevokeTask].
+//     - it will reject nil tasks and tasks of which the typename does not match [TypeSendEmail].
+//     - it will return an error if a task's payload cannot be unmarshalled.
+//     - it will return any received error as-is, including [asynq.SkipRetry] and [asynq.RevokeTask].
 //
 // This function is auto-generated.
 func NewSendEmailProcessor(fn SendEmailProcessor) func(context.Context, *asynq.Task) error {
@@ -232,9 +232,9 @@ func NewSendEmailProcessor(fn SendEmailProcessor) func(context.Context, *asynq.T
 // to [asynq.ServeMux.Handle] and [asynq.ServeMux.HandleFunc].
 //
 // Notes about the returned function:
-//   - it will reject nil tasks and tasks of which the typename does not match [TypeSendSMS].
-//   - it will return an error if a task's payload cannot be unmarshalled.
-//   - it will return any received error as-is, including [asynq.SkipRetry] and [asynq.RevokeTask].
+//     - it will reject nil tasks and tasks of which the typename does not match [TypeSendSMS].
+//     - it will return an error if a task's payload cannot be unmarshalled.
+//     - it will return any received error as-is, including [asynq.SkipRetry] and [asynq.RevokeTask].
 //
 // This function is auto-generated.
 func NewSendSMSProcessor(fn SendSMSProcessor) func(context.Context, *asynq.Task) error {
