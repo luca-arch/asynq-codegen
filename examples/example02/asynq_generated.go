@@ -96,6 +96,7 @@ func NewExampleTaskFromJSONBytes(b []byte) (*ExampleTask, error) {
 // Task's options:
 //
 //   - Max retries: 1
+//   - Retention: 24h0m0s
 //   - Timeout: 10s
 //
 // This function is auto-generated.
@@ -113,6 +114,7 @@ func NewExampleTaskTask(t *ExampleTask) (*asynq.Task, error) {
 		TypeExampleTask,
 		payload,
 		asynq.MaxRetry(1),
+		asynq.Retention(86400000*time.Millisecond),
 		asynq.Timeout(10000*time.Millisecond),
 	), nil
 }
