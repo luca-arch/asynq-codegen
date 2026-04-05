@@ -13,6 +13,7 @@ import (
 
 // Default values for generated asynq.Option.
 const (
+	DefaultRetention   = 24 * time.Hour
 	DefaultRetry       = 5
 	DefaultTaskTimeout = time.Minute
 )
@@ -54,6 +55,33 @@ func (a *AsynqComment) TypeName() string {
 	}
 
 	return a.PackageName + ":" + out
+}
+
+// Retention returns the task retention period (passed as asynq.Option).
+// It defaults to [DefaultRetention] if the value is not specified or if it's not a valid duration.
+//
+// E.g. assume a type MyMessage struct:
+//
+//   - asynq:retention 0 -> returns 0
+//   - asynq:retention 3s -> returns 3s
+//   - asynq:retention BAD -> returns [DefaultRetention].
+func (a *AsynqComment) Retention() time.Duration {
+	in := a.Attributes["retention"]
+	if in == "" {
+		return DefaultRetention
+	}
+
+	out, err := time.ParseDuration(in)
+	if err == nil {
+		return out
+	}
+
+	slog.Info("AsynqComment: retention value is not a duration, defaulting to "+DefaultRetention.String(),
+		slog.String("value", in),
+		slog.String("struct", a.StructName),
+	)
+
+	return DefaultRetention
 }
 
 // Retry returns the maximum number of retries (passed as asynq.Option).
