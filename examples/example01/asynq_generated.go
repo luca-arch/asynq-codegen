@@ -22,6 +22,8 @@ const (
 )
 
 type asynqClient interface {
+	// Enqueue is https://pkg.go.dev/github.com/hibiken/asynq#Client.Enqueue.
+	Enqueue(*asynq.Task, ...asynq.Option) (*asynq.TaskInfo, error)
 	// EnqueueContext is https://pkg.go.dev/github.com/hibiken/asynq#Client.EnqueueContext.
 	EnqueueContext(context.Context, *asynq.Task, ...asynq.Option) (*asynq.TaskInfo, error)
 }
@@ -34,12 +36,12 @@ type asynqMux interface {
 // SendEmailProcessor describes a function that processes [SendEmail].
 //
 // This type is auto-generated.
-type SendEmailProcessor = func(context.Context, *SendEmail) error
+type SendEmailProcessor = func(context.Context, *SendEmail, map[string]string) error
 
 // SendSMSProcessor describes a function that processes [SendSMS].
 //
 // This type is auto-generated.
-type SendSMSProcessor = func(context.Context, *SendSMS) error
+type SendSMSProcessor = func(context.Context, *SendSMS, map[string]string) error
 
 // Processors defines methods to process messages by their type.
 //
@@ -50,6 +52,8 @@ type Processors struct {
 }
 
 // Handle register all non-nil handlers with [asynq.ServeMux.HandleFunc].
+//
+// This function is auto-generated.
 func (p *Processors) Handle(mux asynqMux) {
 	if p.SendEmail != nil {
 		mux.HandleFunc(TypeSendEmail, NewSendEmailProcessor(p.SendEmail))
@@ -61,6 +65,8 @@ func (p *Processors) Handle(mux asynqMux) {
 }
 
 // HandleAll register all handlers with [asynq.ServeMux.HandleFunc]. It returns an error if any handler is nil.
+//
+// This function is auto-generated.
 func (p *Processors) HandleAll(mux asynqMux) error {
 	if p.SendEmail == nil {
 		return fmt.Errorf("nil Processors.SendEmail")
@@ -75,6 +81,21 @@ func (p *Processors) HandleAll(mux asynqMux) error {
 	mux.HandleFunc(TypeSendSMS, NewSendSMSProcessor(p.SendSMS))
 
 	return nil
+}
+
+// Run wires up a new [asynq.Server] with an [asynq.ServeMux] instantiated using the provided
+// options and middlewares.
+//
+// This function is auto-generated.
+func (p *Processors) Run(redisConnOpt asynq.RedisConnOpt, cfg asynq.Config, middlewares ...asynq.MiddlewareFunc) error {
+	mux := asynq.NewServeMux()
+	mux.Use(middlewares...)
+
+	if err := p.HandleAll(mux); err != nil {
+		return fmt.Errorf("registering mux handler: %w", err)
+	}
+
+	return asynq.NewServer(redisConnOpt, cfg).Run(mux)
 }
 
 // NewSendEmailFromJSON consumes a JSON input and returns a [SendEmail].
@@ -106,8 +127,17 @@ func NewSendEmailFromJSONBytes(b []byte) (*SendEmail, error) {
 	return &out, nil
 }
 
-// NewSendEmailTask takes a [SendEmail] pointer and returns a new [asynq.Task] with
+// NewSendEmailTask calls [NewSendEmailTaskWithHeaders] with nil headers.
+//
+// This function is auto-generated.
+func NewSendEmailTask(t *SendEmail) (*asynq.Task, error) {
+	return NewSendEmailTaskWithHeaders(t, nil)
+}
+
+// NewSendEmailTaskWithHeaders takes a [SendEmail] pointer and returns a new [asynq.Task] with
 // its typename set to [TypeSendEmail].
+//
+// It calls [asynq.NewTaskWithHeaders] introduced with asynq 0.26.0.
 //
 // It returns an error if the pointer is nil, or if it cannot be marshalled.
 //
@@ -118,7 +148,7 @@ func NewSendEmailFromJSONBytes(b []byte) (*SendEmail, error) {
 //   - Timeout: 1m0s
 //
 // This function is auto-generated.
-func NewSendEmailTask(t *SendEmail) (*asynq.Task, error) {
+func NewSendEmailTaskWithHeaders(t *SendEmail, headers map[string]string) (*asynq.Task, error) {
 	if t == nil {
 		return nil, fmt.Errorf("nil SendEmail pointer")
 	}
@@ -128,9 +158,10 @@ func NewSendEmailTask(t *SendEmail) (*asynq.Task, error) {
 		return nil, fmt.Errorf("marshalling SendEmail: %w", err)
 	}
 
-	return asynq.NewTask(
+	return asynq.NewTaskWithHeaders(
 		TypeSendEmail,
 		payload,
+		headers,
 		asynq.MaxRetry(5),
 		asynq.Retention(86400000*time.Millisecond),
 		asynq.Timeout(60000*time.Millisecond),
@@ -166,8 +197,17 @@ func NewSendSMSFromJSONBytes(b []byte) (*SendSMS, error) {
 	return &out, nil
 }
 
-// NewSendSMSTask takes a [SendSMS] pointer and returns a new [asynq.Task] with
+// NewSendSMSTask calls [NewSendSMSTaskWithHeaders] with nil headers.
+//
+// This function is auto-generated.
+func NewSendSMSTask(t *SendSMS) (*asynq.Task, error) {
+	return NewSendSMSTaskWithHeaders(t, nil)
+}
+
+// NewSendSMSTaskWithHeaders takes a [SendSMS] pointer and returns a new [asynq.Task] with
 // its typename set to [TypeSendSMS].
+//
+// It calls [asynq.NewTaskWithHeaders] introduced with asynq 0.26.0.
 //
 // It returns an error if the pointer is nil, or if it cannot be marshalled.
 //
@@ -178,7 +218,7 @@ func NewSendSMSFromJSONBytes(b []byte) (*SendSMS, error) {
 //   - Timeout: 1m0s
 //
 // This function is auto-generated.
-func NewSendSMSTask(t *SendSMS) (*asynq.Task, error) {
+func NewSendSMSTaskWithHeaders(t *SendSMS, headers map[string]string) (*asynq.Task, error) {
 	if t == nil {
 		return nil, fmt.Errorf("nil SendSMS pointer")
 	}
@@ -188,9 +228,10 @@ func NewSendSMSTask(t *SendSMS) (*asynq.Task, error) {
 		return nil, fmt.Errorf("marshalling SendSMS: %w", err)
 	}
 
-	return asynq.NewTask(
+	return asynq.NewTaskWithHeaders(
 		TypeSendSMS,
 		payload,
+		headers,
 		asynq.MaxRetry(5),
 		asynq.Retention(86400000*time.Millisecond),
 		asynq.Timeout(60000*time.Millisecond),
@@ -228,7 +269,12 @@ func NewSendEmailProcessor(fn SendEmailProcessor) func(context.Context, *asynq.T
 			return fmt.Errorf("SendEmailProcessor invoked with corrupt payload: %w", err)
 		}
 
-		return fn(ctx, &message)
+		h := task.Headers()
+		if h == nil {
+			h = map[string]string{}
+		}
+
+		return fn(ctx, &message, h)
 	}
 }
 
@@ -263,8 +309,32 @@ func NewSendSMSProcessor(fn SendSMSProcessor) func(context.Context, *asynq.Task)
 			return fmt.Errorf("SendSMSProcessor invoked with corrupt payload: %w", err)
 		}
 
-		return fn(ctx, &message)
+		h := task.Headers()
+		if h == nil {
+			h = map[string]string{}
+		}
+
+		return fn(ctx, &message, h)
 	}
+}
+
+// EnqueueSendEmail pushes a [SendEmail] task to the queue.
+//
+// Additional [asynq.Option] can be passed to override the options set by [NewSendEmailTask].
+//
+// This function is auto-generated.
+func EnqueueSendEmail(client asynqClient, message *SendEmail, opts ...asynq.Option) (*asynq.Task, *asynq.TaskInfo, error) {
+	task, err := NewSendEmailTaskWithHeaders(message, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	info, err := client.Enqueue(task, opts...)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return task, info, nil
 }
 
 // EnqueueSendEmailContext pushes a [SendEmail] task to the queue.
@@ -273,12 +343,63 @@ func NewSendSMSProcessor(fn SendSMSProcessor) func(context.Context, *asynq.Task)
 //
 // This function is auto-generated.
 func EnqueueSendEmailContext(ctx context.Context, client asynqClient, message *SendEmail, opts ...asynq.Option) (*asynq.Task, *asynq.TaskInfo, error) {
-	task, err := NewSendEmailTask(message)
+	return EnqueueSendEmailContextWithHeaders(ctx, client, message, nil, opts...)
+}
+
+// EnqueueSendEmailContextWithHeaders pushes a [SendEmail] task to the queue.
+//
+// It supports task headers introduced with asynq 0.26.0.
+//
+// Additional [asynq.Option] can be passed to override the options set by [NewSendEmailTask].
+//
+// This function is auto-generated.
+func EnqueueSendEmailContextWithHeaders(ctx context.Context, client asynqClient, message *SendEmail, headers map[string]string, opts ...asynq.Option) (*asynq.Task, *asynq.TaskInfo, error) {
+	task, err := NewSendEmailTaskWithHeaders(message, headers)
 	if err != nil {
 		return nil, nil, err
 	}
 
 	info, err := client.EnqueueContext(ctx, task, opts...)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return task, info, nil
+}
+
+// EnqueueSendEmailWithHeaders pushes a [SendEmail] task to the queue.
+//
+// It supports task headers introduced with asynq 0.26.0.
+//
+// Additional [asynq.Option] can be passed to override the options set by [NewSendEmailTask].
+//
+// This function is auto-generated.
+func EnqueueSendEmailWithHeaders(client asynqClient, message *SendEmail, headers map[string]string, opts ...asynq.Option) (*asynq.Task, *asynq.TaskInfo, error) {
+	task, err := NewSendEmailTaskWithHeaders(message, headers)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	info, err := client.Enqueue(task, opts...)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return task, info, nil
+}
+
+// EnqueueSendSMS pushes a [SendSMS] task to the queue.
+//
+// Additional [asynq.Option] can be passed to override the options set by [NewSendSMSTask].
+//
+// This function is auto-generated.
+func EnqueueSendSMS(client asynqClient, message *SendSMS, opts ...asynq.Option) (*asynq.Task, *asynq.TaskInfo, error) {
+	task, err := NewSendSMSTaskWithHeaders(message, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	info, err := client.Enqueue(task, opts...)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -292,12 +413,44 @@ func EnqueueSendEmailContext(ctx context.Context, client asynqClient, message *S
 //
 // This function is auto-generated.
 func EnqueueSendSMSContext(ctx context.Context, client asynqClient, message *SendSMS, opts ...asynq.Option) (*asynq.Task, *asynq.TaskInfo, error) {
-	task, err := NewSendSMSTask(message)
+	return EnqueueSendSMSContextWithHeaders(ctx, client, message, nil, opts...)
+}
+
+// EnqueueSendSMSContextWithHeaders pushes a [SendSMS] task to the queue.
+//
+// It supports task headers introduced with asynq 0.26.0.
+//
+// Additional [asynq.Option] can be passed to override the options set by [NewSendSMSTask].
+//
+// This function is auto-generated.
+func EnqueueSendSMSContextWithHeaders(ctx context.Context, client asynqClient, message *SendSMS, headers map[string]string, opts ...asynq.Option) (*asynq.Task, *asynq.TaskInfo, error) {
+	task, err := NewSendSMSTaskWithHeaders(message, headers)
 	if err != nil {
 		return nil, nil, err
 	}
 
 	info, err := client.EnqueueContext(ctx, task, opts...)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return task, info, nil
+}
+
+// EnqueueSendSMSWithHeaders pushes a [SendSMS] task to the queue.
+//
+// It supports task headers introduced with asynq 0.26.0.
+//
+// Additional [asynq.Option] can be passed to override the options set by [NewSendSMSTask].
+//
+// This function is auto-generated.
+func EnqueueSendSMSWithHeaders(client asynqClient, message *SendSMS, headers map[string]string, opts ...asynq.Option) (*asynq.Task, *asynq.TaskInfo, error) {
+	task, err := NewSendSMSTaskWithHeaders(message, headers)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	info, err := client.Enqueue(task, opts...)
 	if err != nil {
 		return nil, nil, err
 	}
