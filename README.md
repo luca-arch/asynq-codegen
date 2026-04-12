@@ -53,7 +53,7 @@ package example
 type SendEmail struct {
     To      string
     Subject string
-	Body    string
+    Body    string
 }
 ```
 
@@ -64,7 +64,7 @@ The generated file will contain, for instance:
 ```go
 const TypeSendEmail = "example:send_email"
 
-type SendEmailProcessor = func(context.Context, *SendEmail) error
+type SendEmailProcessor = func(context.Context, *SendEmail, map[string]string) error
 
 type Processors struct {
     SendEmail SendEmailProcessor
@@ -74,7 +74,11 @@ func NewSendEmailProcessor(SendEmailProcessor) asynq.HandlerFunc { ... }
 
 func NewSendEmailTask(*SendEmail) (*asynq.Task, error) { ... }
 
+func EnqueueSendEmail(*asynq.Client, *SendEmail, ...asynq.Option) (*asynq.Task, *asynq.TaskInfo, error) { ... }
+
 func EnqueueSendEmailContext(context.Context, *asynq.Client, *SendEmail, ...asynq.Option) (*asynq.Task, *asynq.TaskInfo, error) { ... }
+
+func EnqueueSendEmailWithHeaders(*asynq.Client, *SendEmail, map[string]string, ...asynq.Option) (*asynq.Task, *asynq.TaskInfo, error) { ... }
 ```
 
 See the generated files in [examples](./examples) folder.
@@ -89,7 +93,7 @@ See the generated files in [examples](./examples) folder.
 client := asynq.NewClient(asynq.RedisClientOpt{Addr: redisAddr})
 defer client.Close()
 
-task, info, err := EnqueueSendEmailContext(ctx, client, &SendEmail{
+task, info, err := EnqueueSendEmail(client, &SendEmail{
     To:      "user@example.com",
     Subject: "Welcome user",
     Body:    "Hello!",
@@ -99,6 +103,29 @@ task, info, err := EnqueueSendEmailContext(ctx, client, &SendEmail{
 In the above example, `EnqueueSendEmailContext` accepts additional `asynq.Option` arguments to allow overriding the auto-generated ones.
 
 ### Register task processors
+
+Use the auto-generated [Processors.Run] method to automatically start a new `asynq.Server`. It also accepts optional middleware functions for the mux, as per the [asynq documentation](https://github.com/hibiken/asynq/wiki/Handler-Deep-Dive#using-middleware).
+
+```go
+processors := &Processors{
+    SendEmail: func(_ context.Context, msg *SendEmail, _ map[string]string) error {
+        log.Println("sending email to:", msg.To)
+
+        return nil
+    },
+}
+
+if err := processors.Run(
+    asynq.RedisClientOpt{Addr: "127.0.0.1:6379"},
+    asynq.Config{Concurrency: 5},
+); err != nil {
+    log.Fatal(err)
+}
+```
+
+### For more granular control
+
+`Processors` can be registered as handlers to `asynq.ServeMux` in a more verbose way:
 
 ```go
 mux := asynq.NewServeMux()
@@ -120,7 +147,7 @@ if err := processors.HandleAll(mux); err != nil {
 }
 ```
 
-### For more granular control
+Manual wiring of a `ServeMux` is still possible:
 
 ```go
 mux := asynq.NewServeMux()
@@ -144,7 +171,7 @@ Directives are read from struct doc comments, and are all optional: only one `as
 
 ### `asynq:task`
 
-```
+```go
 // asynq:task send_email
 ```
 
@@ -154,7 +181,7 @@ If no value is provided, the struct name is converted to snake case.
 
 ### `asynq:retention`
 
-```
+```go
 // asynq:retention 7d
 ```
 
@@ -162,7 +189,7 @@ Directive for [asynq.Retention](https://github.com/hibiken/asynq/wiki/Task-Reten
 
 ### `asynq:retry`
 
-```
+```go
 // asynq:retry 3
 ```
 
@@ -170,7 +197,7 @@ Directive for [asynq.MaxRetry](https://github.com/hibiken/asynq/wiki/Task-Retry)
 
 ### `asynq:timeout`
 
-```
+```go
 // asynq:timeout 5m
 ```
 
@@ -187,9 +214,9 @@ to discuss the design.
 
 ### Local development notes
 
-- Lint files with `golangci-lint run --fix ./...`
-- Generate example files with `go generate ./...`
-- Use [gitmoji](https://gitmoji.dev/)!
+* *Lint files with `golangci-lint run --fix ./...`
+* *Generate example files with `go generate ./...`
+* *Use [gitmoji](https://gitmoji.dev/)!
 
 ---
 

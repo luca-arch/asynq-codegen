@@ -22,6 +22,8 @@ const (
 )
 
 type asynqClient interface {
+	// Enqueue is https://pkg.go.dev/github.com/hibiken/asynq#Client.Enqueue.
+	Enqueue(*asynq.Task, ...asynq.Option) (*asynq.TaskInfo, error)
 	// EnqueueContext is https://pkg.go.dev/github.com/hibiken/asynq#Client.EnqueueContext.
 	EnqueueContext(context.Context, *asynq.Task, ...asynq.Option) (*asynq.TaskInfo, error)
 }
@@ -34,12 +36,12 @@ type asynqMux interface {
 // Task01Processor describes a function that processes [Task01].
 //
 // This type is auto-generated.
-type Task01Processor = func(context.Context, *Task01) error
+type Task01Processor = func(context.Context, *Task01, map[string]string) error
 
 // Task02Processor describes a function that processes [Task02].
 //
 // This type is auto-generated.
-type Task02Processor = func(context.Context, *Task02) error
+type Task02Processor = func(context.Context, *Task02, map[string]string) error
 
 // Processors defines methods to process messages by their type.
 //
@@ -50,6 +52,8 @@ type Processors struct {
 }
 
 // Handle register all non-nil handlers with [asynq.ServeMux.HandleFunc].
+//
+// This function is auto-generated.
 func (p *Processors) Handle(mux asynqMux) {
 	if p.Task01 != nil {
 		mux.HandleFunc(TypeTask01, NewTask01Processor(p.Task01))
@@ -61,6 +65,8 @@ func (p *Processors) Handle(mux asynqMux) {
 }
 
 // HandleAll register all handlers with [asynq.ServeMux.HandleFunc]. It returns an error if any handler is nil.
+//
+// This function is auto-generated.
 func (p *Processors) HandleAll(mux asynqMux) error {
 	if p.Task01 == nil {
 		return fmt.Errorf("nil Processors.Task01")
@@ -75,6 +81,21 @@ func (p *Processors) HandleAll(mux asynqMux) error {
 	mux.HandleFunc(TypeTask02, NewTask02Processor(p.Task02))
 
 	return nil
+}
+
+// Run wires up a new [asynq.Server] with an [asynq.ServeMux] instantiated using the provided
+// options and middlewares.
+//
+// This function is auto-generated.
+func (p *Processors) Run(redisConnOpt asynq.RedisConnOpt, cfg asynq.Config, middlewares ...asynq.MiddlewareFunc) error {
+	mux := asynq.NewServeMux()
+	mux.Use(middlewares...)
+
+	if err := p.HandleAll(mux); err != nil {
+		return fmt.Errorf("registering mux handler: %w", err)
+	}
+
+	return asynq.NewServer(redisConnOpt, cfg).Run(mux)
 }
 
 // NewTask01FromJSON consumes a JSON input and returns a [Task01].
@@ -106,8 +127,17 @@ func NewTask01FromJSONBytes(b []byte) (*Task01, error) {
 	return &out, nil
 }
 
-// NewTask01Task takes a [Task01] pointer and returns a new [asynq.Task] with
+// NewTask01Task calls [NewTask01TaskWithHeaders] with nil headers.
+//
+// This function is auto-generated.
+func NewTask01Task(t *Task01) (*asynq.Task, error) {
+	return NewTask01TaskWithHeaders(t, nil)
+}
+
+// NewTask01TaskWithHeaders takes a [Task01] pointer and returns a new [asynq.Task] with
 // its typename set to [TypeTask01].
+//
+// It calls [asynq.NewTaskWithHeaders] introduced with asynq 0.26.0.
 //
 // It returns an error if the pointer is nil, or if it cannot be marshalled.
 //
@@ -118,7 +148,7 @@ func NewTask01FromJSONBytes(b []byte) (*Task01, error) {
 //   - Timeout: 1m0s
 //
 // This function is auto-generated.
-func NewTask01Task(t *Task01) (*asynq.Task, error) {
+func NewTask01TaskWithHeaders(t *Task01, headers map[string]string) (*asynq.Task, error) {
 	if t == nil {
 		return nil, fmt.Errorf("nil Task01 pointer")
 	}
@@ -128,9 +158,10 @@ func NewTask01Task(t *Task01) (*asynq.Task, error) {
 		return nil, fmt.Errorf("marshalling Task01: %w", err)
 	}
 
-	return asynq.NewTask(
+	return asynq.NewTaskWithHeaders(
 		TypeTask01,
 		payload,
+		headers,
 		asynq.MaxRetry(5),
 		asynq.Retention(86400000*time.Millisecond),
 		asynq.Timeout(60000*time.Millisecond),
@@ -166,8 +197,17 @@ func NewTask02FromJSONBytes(b []byte) (*Task02, error) {
 	return &out, nil
 }
 
-// NewTask02Task takes a [Task02] pointer and returns a new [asynq.Task] with
+// NewTask02Task calls [NewTask02TaskWithHeaders] with nil headers.
+//
+// This function is auto-generated.
+func NewTask02Task(t *Task02) (*asynq.Task, error) {
+	return NewTask02TaskWithHeaders(t, nil)
+}
+
+// NewTask02TaskWithHeaders takes a [Task02] pointer and returns a new [asynq.Task] with
 // its typename set to [TypeTask02].
+//
+// It calls [asynq.NewTaskWithHeaders] introduced with asynq 0.26.0.
 //
 // It returns an error if the pointer is nil, or if it cannot be marshalled.
 //
@@ -178,7 +218,7 @@ func NewTask02FromJSONBytes(b []byte) (*Task02, error) {
 //   - Timeout: 1m0s
 //
 // This function is auto-generated.
-func NewTask02Task(t *Task02) (*asynq.Task, error) {
+func NewTask02TaskWithHeaders(t *Task02, headers map[string]string) (*asynq.Task, error) {
 	if t == nil {
 		return nil, fmt.Errorf("nil Task02 pointer")
 	}
@@ -188,9 +228,10 @@ func NewTask02Task(t *Task02) (*asynq.Task, error) {
 		return nil, fmt.Errorf("marshalling Task02: %w", err)
 	}
 
-	return asynq.NewTask(
+	return asynq.NewTaskWithHeaders(
 		TypeTask02,
 		payload,
+		headers,
 		asynq.MaxRetry(5),
 		asynq.Retention(86400000*time.Millisecond),
 		asynq.Timeout(60000*time.Millisecond),
@@ -228,7 +269,12 @@ func NewTask01Processor(fn Task01Processor) func(context.Context, *asynq.Task) e
 			return fmt.Errorf("Task01Processor invoked with corrupt payload: %w", err)
 		}
 
-		return fn(ctx, &message)
+		h := task.Headers()
+		if h == nil {
+			h = map[string]string{}
+		}
+
+		return fn(ctx, &message, h)
 	}
 }
 
@@ -263,8 +309,32 @@ func NewTask02Processor(fn Task02Processor) func(context.Context, *asynq.Task) e
 			return fmt.Errorf("Task02Processor invoked with corrupt payload: %w", err)
 		}
 
-		return fn(ctx, &message)
+		h := task.Headers()
+		if h == nil {
+			h = map[string]string{}
+		}
+
+		return fn(ctx, &message, h)
 	}
+}
+
+// EnqueueTask01 pushes a [Task01] task to the queue.
+//
+// Additional [asynq.Option] can be passed to override the options set by [NewTask01Task].
+//
+// This function is auto-generated.
+func EnqueueTask01(client asynqClient, message *Task01, opts ...asynq.Option) (*asynq.Task, *asynq.TaskInfo, error) {
+	task, err := NewTask01TaskWithHeaders(message, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	info, err := client.Enqueue(task, opts...)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return task, info, nil
 }
 
 // EnqueueTask01Context pushes a [Task01] task to the queue.
@@ -273,12 +343,63 @@ func NewTask02Processor(fn Task02Processor) func(context.Context, *asynq.Task) e
 //
 // This function is auto-generated.
 func EnqueueTask01Context(ctx context.Context, client asynqClient, message *Task01, opts ...asynq.Option) (*asynq.Task, *asynq.TaskInfo, error) {
-	task, err := NewTask01Task(message)
+	return EnqueueTask01ContextWithHeaders(ctx, client, message, nil, opts...)
+}
+
+// EnqueueTask01ContextWithHeaders pushes a [Task01] task to the queue.
+//
+// It supports task headers introduced with asynq 0.26.0.
+//
+// Additional [asynq.Option] can be passed to override the options set by [NewTask01Task].
+//
+// This function is auto-generated.
+func EnqueueTask01ContextWithHeaders(ctx context.Context, client asynqClient, message *Task01, headers map[string]string, opts ...asynq.Option) (*asynq.Task, *asynq.TaskInfo, error) {
+	task, err := NewTask01TaskWithHeaders(message, headers)
 	if err != nil {
 		return nil, nil, err
 	}
 
 	info, err := client.EnqueueContext(ctx, task, opts...)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return task, info, nil
+}
+
+// EnqueueTask01WithHeaders pushes a [Task01] task to the queue.
+//
+// It supports task headers introduced with asynq 0.26.0.
+//
+// Additional [asynq.Option] can be passed to override the options set by [NewTask01Task].
+//
+// This function is auto-generated.
+func EnqueueTask01WithHeaders(client asynqClient, message *Task01, headers map[string]string, opts ...asynq.Option) (*asynq.Task, *asynq.TaskInfo, error) {
+	task, err := NewTask01TaskWithHeaders(message, headers)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	info, err := client.Enqueue(task, opts...)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return task, info, nil
+}
+
+// EnqueueTask02 pushes a [Task02] task to the queue.
+//
+// Additional [asynq.Option] can be passed to override the options set by [NewTask02Task].
+//
+// This function is auto-generated.
+func EnqueueTask02(client asynqClient, message *Task02, opts ...asynq.Option) (*asynq.Task, *asynq.TaskInfo, error) {
+	task, err := NewTask02TaskWithHeaders(message, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	info, err := client.Enqueue(task, opts...)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -292,12 +413,44 @@ func EnqueueTask01Context(ctx context.Context, client asynqClient, message *Task
 //
 // This function is auto-generated.
 func EnqueueTask02Context(ctx context.Context, client asynqClient, message *Task02, opts ...asynq.Option) (*asynq.Task, *asynq.TaskInfo, error) {
-	task, err := NewTask02Task(message)
+	return EnqueueTask02ContextWithHeaders(ctx, client, message, nil, opts...)
+}
+
+// EnqueueTask02ContextWithHeaders pushes a [Task02] task to the queue.
+//
+// It supports task headers introduced with asynq 0.26.0.
+//
+// Additional [asynq.Option] can be passed to override the options set by [NewTask02Task].
+//
+// This function is auto-generated.
+func EnqueueTask02ContextWithHeaders(ctx context.Context, client asynqClient, message *Task02, headers map[string]string, opts ...asynq.Option) (*asynq.Task, *asynq.TaskInfo, error) {
+	task, err := NewTask02TaskWithHeaders(message, headers)
 	if err != nil {
 		return nil, nil, err
 	}
 
 	info, err := client.EnqueueContext(ctx, task, opts...)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return task, info, nil
+}
+
+// EnqueueTask02WithHeaders pushes a [Task02] task to the queue.
+//
+// It supports task headers introduced with asynq 0.26.0.
+//
+// Additional [asynq.Option] can be passed to override the options set by [NewTask02Task].
+//
+// This function is auto-generated.
+func EnqueueTask02WithHeaders(client asynqClient, message *Task02, headers map[string]string, opts ...asynq.Option) (*asynq.Task, *asynq.TaskInfo, error) {
+	task, err := NewTask02TaskWithHeaders(message, headers)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	info, err := client.Enqueue(task, opts...)
 	if err != nil {
 		return nil, nil, err
 	}

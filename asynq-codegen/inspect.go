@@ -42,6 +42,7 @@ func Generate(inspectResult *InspectResult, destination string) error {
 func Inspect(cwd string) (*InspectResult, error) {
 	fset := token.NewFileSet()
 
+	//nolint:staticcheck // parser.ParseDir is deprecated but still works, and better tolerates certain syntax/type errors.
 	pkgs, err := parser.ParseDir(
 		fset,
 		cwd,
@@ -86,6 +87,7 @@ func Inspect(cwd string) (*InspectResult, error) {
 	return out, nil
 }
 
+//nolint:staticcheck // ast.Package is deprecated but still works, and better tolerates certain syntax/type errors.
 func inspectStructAnnotation(decl ast.Decl, pkg *ast.Package) (*AsynqComment, error) {
 	gen, ok := decl.(*ast.GenDecl)
 	if !ok || gen.Tok != token.TYPE || len(gen.Specs) == 0 {

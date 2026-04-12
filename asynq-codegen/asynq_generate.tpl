@@ -23,6 +23,8 @@ const (
 
 {{/* Interfaces of asynq package */}}
 type asynqClient interface {
+    // Enqueue is https://pkg.go.dev/github.com/hibiken/asynq#Client.Enqueue.
+    Enqueue(*asynq.Task, ...asynq.Option) (*asynq.TaskInfo, error)
     // EnqueueContext is https://pkg.go.dev/github.com/hibiken/asynq#Client.EnqueueContext.
     EnqueueContext(context.Context, *asynq.Task, ...asynq.Option) (*asynq.TaskInfo, error)
 }
@@ -37,7 +39,7 @@ type asynqMux interface {
 // {{ .StructName }}Processor describes a function that processes [{{ .StructName }}].
 //
 // This type is auto-generated.
-type {{ .StructName }}Processor = func (context.Context, *{{ .StructName }}) error
+type {{ .StructName }}Processor = func (context.Context, *{{ .StructName }}, map[string]string) error
 {{ end -}}
 
 // Processors defines methods to process messages by their type.
@@ -50,6 +52,8 @@ type Processors struct {
 }
 
 // Handle register all non-nil handlers with [asynq.ServeMux.HandleFunc].
+//
+// This function is auto-generated.
 func (p *Processors) Handle(mux asynqMux) {
     {{- range $arg := .Comments }}
         if p.{{ .StructName }} != nil {
@@ -59,6 +63,8 @@ func (p *Processors) Handle(mux asynqMux) {
 }
 
 // HandleAll register all handlers with [asynq.ServeMux.HandleFunc]. It returns an error if any handler is nil.
+//
+// This function is auto-generated.
 func (p *Processors) HandleAll(mux asynqMux) error {
     {{- range $arg := .Comments }}
         if p.{{ .StructName }} == nil {
@@ -71,6 +77,21 @@ func (p *Processors) HandleAll(mux asynqMux) error {
     {{ end }}
 
     return nil
+}
+
+// Run wires up a new [asynq.Server] with an [asynq.ServeMux] instantiated using the provided
+// options and middlewares.
+//
+// This function is auto-generated.
+func (p *Processors) Run(redisConnOpt asynq.RedisConnOpt, cfg asynq.Config, middlewares ...asynq.MiddlewareFunc) error {
+    mux := asynq.NewServeMux()
+    mux.Use(middlewares...)
+
+    if err := p.HandleAll(mux); err != nil {
+        return fmt.Errorf("registering mux handler: %w", err)
+    }
+
+    return asynq.NewServer(redisConnOpt, cfg).Run(mux)
 }
 
 {{/* Tasks factories */}}
@@ -104,8 +125,17 @@ func New{{ .StructName }}FromJSONBytes(b []byte) (*{{ .StructName }}, error) {
     return &out, nil
 }
 
-// New{{ .StructName }}Task takes a [{{ .StructName }}] pointer and returns a new [asynq.Task] with
+// New{{ .StructName }}Task calls [New{{ .StructName }}TaskWithHeaders] with nil headers.
+//
+// This function is auto-generated.
+func New{{ .StructName }}Task(t *{{ .StructName }}) (*asynq.Task, error) {
+    return New{{ .StructName }}TaskWithHeaders(t, nil)
+}
+
+// New{{ .StructName }}TaskWithHeaders takes a [{{ .StructName }}] pointer and returns a new [asynq.Task] with
 // its typename set to [Type{{ .StructName }}].
+//
+// It calls [asynq.NewTaskWithHeaders] introduced with asynq 0.26.0.
 //
 // It returns an error if the pointer is nil, or if it cannot be marshalled.
 //
@@ -116,7 +146,7 @@ func New{{ .StructName }}FromJSONBytes(b []byte) (*{{ .StructName }}, error) {
 //    - Timeout: {{ .Timeout.String }}
 //
 // This function is auto-generated.
-func New{{ .StructName }}Task(t *{{ .StructName }}) (*asynq.Task, error) {
+func New{{ .StructName }}TaskWithHeaders(t *{{ .StructName }}, headers map[string]string) (*asynq.Task, error) {
     if t == nil {
         return nil, fmt.Errorf("nil {{ .StructName }} pointer")
     }
@@ -126,9 +156,10 @@ func New{{ .StructName }}Task(t *{{ .StructName }}) (*asynq.Task, error) {
         return nil, fmt.Errorf("marshalling {{ .StructName }}: %w", err)
     }
 
-    return asynq.NewTask(
+    return asynq.NewTaskWithHeaders(
         Type{{ .StructName }},
         payload,
+        headers,
         asynq.MaxRetry({{ .Retry }}),
         asynq.Retention({{ .Retention.Milliseconds }} * time.Millisecond),
         asynq.Timeout({{ .Timeout.Milliseconds }} * time.Millisecond),
@@ -169,25 +200,81 @@ func New{{ .StructName }}Task(t *{{ .StructName }}) (*asynq.Task, error) {
                 return fmt.Errorf("{{ .StructName }}Processor invoked with corrupt payload: %w", err)
             }
 
-            return fn(ctx, &message)
+            h := task.Headers()
+            if h == nil {
+                h = map[string]string{}
+            }
+
+            return fn(ctx, &message, h)
         }
     }
 {{ end -}}
 
 {{/* Functions to enqueue tasks. */}}
 {{- range $arg := .Comments }}
+    // Enqueue{{ .StructName }} pushes a [{{ .StructName }}] task to the queue.
+    //
+    // Additional [asynq.Option] can be passed to override the options set by [New{{ .StructName }}Task].
+    //
+    // This function is auto-generated.
+    func Enqueue{{ .StructName }}(client asynqClient, message *{{ .StructName }}, opts ...asynq.Option) (*asynq.Task, *asynq.TaskInfo, error) {
+        task, err := New{{ .StructName }}TaskWithHeaders(message, nil)
+        if err != nil {
+            return nil, nil, err
+        }
+
+        info, err := client.Enqueue(task, opts...)
+        if err != nil {
+            return nil, nil, err
+        }
+
+        return task, info, nil
+    }
+
     // Enqueue{{ .StructName }}Context pushes a [{{ .StructName }}] task to the queue.
     //
     // Additional [asynq.Option] can be passed to override the options set by [New{{ .StructName }}Task].
     //
     // This function is auto-generated.
     func Enqueue{{ .StructName }}Context(ctx context.Context, client asynqClient, message *{{ .StructName }}, opts ...asynq.Option) (*asynq.Task, *asynq.TaskInfo, error) {
-        task, err := New{{ .StructName }}Task(message)
+        return Enqueue{{ .StructName }}ContextWithHeaders(ctx, client, message, nil, opts...)
+    }
+
+    // Enqueue{{ .StructName }}ContextWithHeaders pushes a [{{ .StructName }}] task to the queue.
+    //
+    // It supports task headers introduced with asynq 0.26.0.
+    //
+    // Additional [asynq.Option] can be passed to override the options set by [New{{ .StructName }}Task].
+    //
+    // This function is auto-generated.
+    func Enqueue{{ .StructName }}ContextWithHeaders(ctx context.Context, client asynqClient, message *{{ .StructName }}, headers map[string]string, opts ...asynq.Option) (*asynq.Task, *asynq.TaskInfo, error) {
+        task, err := New{{ .StructName }}TaskWithHeaders(message, headers)
         if err != nil {
             return nil, nil, err
         }
 
         info, err := client.EnqueueContext(ctx, task, opts...)
+        if err != nil {
+            return nil, nil, err
+        }
+
+        return task, info, nil
+    }
+
+    // Enqueue{{ .StructName }}WithHeaders pushes a [{{ .StructName }}] task to the queue.
+    //
+    // It supports task headers introduced with asynq 0.26.0.
+    //
+    // Additional [asynq.Option] can be passed to override the options set by [New{{ .StructName }}Task].
+    //
+    // This function is auto-generated.
+    func Enqueue{{ .StructName }}WithHeaders(client asynqClient, message *{{ .StructName }}, headers map[string]string, opts ...asynq.Option) (*asynq.Task, *asynq.TaskInfo, error) {
+        task, err := New{{ .StructName }}TaskWithHeaders(message, headers)
+        if err != nil {
+            return nil, nil, err
+        }
+
+        info, err := client.Enqueue(task, opts...)
         if err != nil {
             return nil, nil, err
         }
