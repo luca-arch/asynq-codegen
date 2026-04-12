@@ -73,6 +73,21 @@ func (p *Processors) HandleAll(mux asynqMux) error {
     return nil
 }
 
+// Run wires up a new [asynq.Server] with an [asynq.ServeMux] instantiated using the provided
+// options and middlewares.
+//
+// This function is auto-generated.
+func (p *Processors) Run(redisConnOpt asynq.RedisConnOpt, cfg asynq.Config, middlewares ...asynq.MiddlewareFunc) error {
+    mux := asynq.NewServeMux()
+    mux.Use(middlewares...)
+
+    if err := p.HandleAll(mux); err != nil {
+        return fmt.Errorf("registering mux handler: %w", err)
+    }
+
+    return asynq.NewServer(redisConnOpt, cfg).Run(mux)
+}
+
 {{/* Tasks factories */}}
 {{- range $arg := .Comments }}
 // New{{ .StructName }}FromJSON consumes a JSON input and returns a [{{ .StructName }}].
