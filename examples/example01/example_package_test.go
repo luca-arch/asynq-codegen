@@ -46,10 +46,10 @@ func ExampleProcessors_HandleAll() {
 	serveMux := asynq.NewServeMux()
 
 	if err := (&example01.Processors{
-		SendEmail: func(context.Context, *example01.SendEmail) error {
+		SendEmail: func(context.Context, *example01.SendEmail, map[string]string) error {
 			return nil
 		},
-		SendSMS: func(context.Context, *example01.SendSMS) error {
+		SendSMS: func(context.Context, *example01.SendSMS, map[string]string) error {
 			return nil
 		},
 	}).HandleAll(serveMux); err != nil {
