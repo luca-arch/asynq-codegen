@@ -4,6 +4,7 @@ import (
 	"context"
 	"log/slog"
 	"os"
+	"os/signal"
 	"time"
 
 	"github.com/hibiken/asynq"
@@ -42,9 +43,14 @@ func Consumer(ctx context.Context) error {
 		},
 	}
 
+	// Never pass [context.Background] to [Processors.Run]!
+	ctx, stop := signal.NotifyContext(ctx, os.Interrupt)
+	defer stop()
+
 	slog.InfoContext(ctx, "starting Consumer")
 
 	return processors.Run(
+		ctx,
 		asynq.RedisClientOpt{Addr: redisDSN},
 		asynq.Config{Concurrency: workersConcurrency},
 	)
@@ -58,9 +64,11 @@ func Producer(ctx context.Context) error {
 		"start": time.Now().String(),
 	}
 
+	dispatcher := &Dispatcher{Client: client}
+
 	for {
 		// Enqueue Task01 (with context.Background(), no headers)
-		task1, info, err := EnqueueTask01(client, &Task01{
+		task1, info, err := dispatcher.EnqueueTask01(&Task01{
 			Created: time.Now(),
 		})
 		if err != nil {
@@ -72,7 +80,7 @@ func Producer(ctx context.Context) error {
 		<-time.After(time.Second)
 
 		// Enqueue Task02 (pass context and headers)
-		task2, info, err := EnqueueTask02ContextWithHeaders(ctx, client, &Task02{
+		task2, info, err := dispatcher.EnqueueTask02ContextWithHeaders(ctx, &Task02{
 			Created: time.Now(),
 		}, headers)
 		if err != nil {

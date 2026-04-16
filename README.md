@@ -6,7 +6,7 @@ It scans your Go source files for `// asynq:` directives on structs and generate
 
 * strongly-typed task type constants
 * task constructors
-* processor adapters for `asynq.ServeMux`
+* processor and dispatcher adapters for `asynq.ServeMux`
 * enqueue helper functions
 * JSON helpers
 
@@ -66,6 +66,10 @@ const TypeSendEmail = "example:send_email"
 
 type SendEmailProcessor = func(context.Context, *SendEmail, map[string]string) error
 
+type Dispatcher struct {
+    Client asynqClient
+}
+
 type Processors struct {
     SendEmail SendEmailProcessor
 }
@@ -81,13 +85,40 @@ func EnqueueSendEmailContext(context.Context, *asynq.Client, *SendEmail, ...asyn
 func EnqueueSendEmailWithHeaders(*asynq.Client, *SendEmail, map[string]string, ...asynq.Option) (*asynq.Task, *asynq.TaskInfo, error) { ... }
 ```
 
+**Note** the generated files never import the `asynq-codegen` package!
+
 See the generated files in [examples](./examples) folder.
 
 ---
 
 ## Generated API overview
 
-### Enqueue a task
+### Enqueue a task (using the dispatcher)
+
+```go
+client := asynq.NewClient(asynq.RedisClientOpt{Addr: redisAddr})
+defer client.Close()
+
+dispatcher := &Dispatcher{client}
+
+task, info, err := dispatcher.EnqueueSendEmail(&SendEmail{
+    To:      "user@example.com",
+    Subject: "Welcome user",
+    Body:    "Hello!",
+})
+
+// Or enqueue with headers (since asynq 0.26.0)
+task, info, err := dispatcher.EnqueueSendEmailWithHeaders(&SendEmail{
+    To:      "user@example.com",
+    Subject: "Welcome user",
+    Body:    "Hello!",
+}, map[string]string{
+    "header1": "foo",
+    "header2": "bar",
+})
+```
+
+### Enqueue a task (using functions)
 
 ```go
 client := asynq.NewClient(asynq.RedisClientOpt{Addr: redisAddr})
@@ -104,7 +135,9 @@ In the above example, `EnqueueSendEmailContext` accepts additional `asynq.Option
 
 ### Register task processors
 
-Use the auto-generated [Processors.Run] method to automatically start a new `asynq.Server`. It also accepts optional middleware functions for the mux, as per the [asynq documentation](https://github.com/hibiken/asynq/wiki/Handler-Deep-Dive#using-middleware).
+Use the auto-generated `Processors.Run` method to automatically start a new `asynq.Server`. It also accepts optional middleware functions for the mux, as per the [asynq documentation](https://github.com/hibiken/asynq/wiki/Handler-Deep-Dive#using-middleware).
+
+Note `context.TODO()` is used for simplicity, (never pass `context.Background()` here!.
 
 ```go
 processors := &Processors{
@@ -116,6 +149,7 @@ processors := &Processors{
 }
 
 if err := processors.Run(
+    context.TODO(),
     asynq.RedisClientOpt{Addr: "127.0.0.1:6379"},
     asynq.Config{Concurrency: 5},
 ); err != nil {
@@ -124,6 +158,8 @@ if err := processors.Run(
 ```
 
 ### For more granular control
+
+The `Run` method calls `NewServer` and `NewServeMux` under the hood (both methods are exported).
 
 `Processors` can be registered as handlers to `asynq.ServeMux` in a more verbose way:
 
