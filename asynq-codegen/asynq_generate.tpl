@@ -42,6 +42,44 @@ type asynqMux interface {
 type {{ .StructName }}Processor = func (context.Context, *{{ .StructName }}, map[string]string) error
 {{ end -}}
 
+{{/* Dispatcher and Processors exported types */}}
+// Dispatcher defines methods to enqueue messages, using the already exported Enqueue* methods.
+//
+// This type is auto-generated.
+type Dispatcher struct {
+    Client asynqClient
+}
+
+{{- range $arg := .Comments }}
+    // Enqueue{{ .StructName }} invokes [Enqueue{{ .StructName }}].
+    //
+    // This method is auto-generated.
+    func (d *Dispatcher) Enqueue{{ .StructName }}(message *{{ .StructName }}, opts ...asynq.Option) (*asynq.Task, *asynq.TaskInfo, error) {
+        return Enqueue{{ .StructName }}(d.Client, message, opts...)
+    }
+
+    // Enqueue{{ .StructName }}Context invokes [Enqueue{{ .StructName }}Context].
+    //
+    // This method is auto-generated.
+    func (d *Dispatcher) Enqueue{{ .StructName }}Context(ctx context.Context, message *{{ .StructName }}, opts ...asynq.Option) (*asynq.Task, *asynq.TaskInfo, error) {
+        return Enqueue{{ .StructName }}Context(ctx, d.Client, message, opts...)
+    }
+
+    // Enqueue{{ .StructName }}ContextWithHeaders invokes [Enqueue{{ .StructName }}ContextWithHeaders].
+    //
+    // This method is auto-generated.
+    func (d *Dispatcher) Enqueue{{ .StructName }}ContextWithHeaders(ctx context.Context, message *{{ .StructName }}, headers map[string]string, opts ...asynq.Option) (*asynq.Task, *asynq.TaskInfo, error) {
+        return Enqueue{{ .StructName }}ContextWithHeaders(ctx, d.Client, message, headers, opts...)
+    }
+
+    // Enqueue{{ .StructName }}WithHeaders invokes a [Enqueue{{ .StructName }}WithHeaders].
+    //
+    // This method is auto-generated.
+    func (d *Dispatcher) Enqueue{{ .StructName }}WithHeaders(message *{{ .StructName }}, headers map[string]string, opts ...asynq.Option) (*asynq.Task, *asynq.TaskInfo, error) {
+        return Enqueue{{ .StructName }}WithHeaders(d.Client, message, headers, opts...)
+    }
+{{ end -}}
+
 // Processors defines methods to process messages by their type.
 //
 // This type is auto-generated.
@@ -105,12 +143,12 @@ func (p *Processors) NewServer(redisConnOpt asynq.RedisConnOpt, cfg asynq.Config
 //
 // This function is auto-generated.
 func (p *Processors) NewServeMux(redisConnOpt asynq.RedisConnOpt, cfg asynq.Config, middlewares ...asynq.MiddlewareFunc) (*asynq.ServeMux, error) {
-    mux := asynq.NewServeMux()
-    mux.Use(middlewares...)
+	mux := asynq.NewServeMux()
+	mux.Use(middlewares...)
 
-    if err := p.HandleAll(mux); err != nil {
+	if err := p.HandleAll(mux); err != nil {
 		return nil, fmt.Errorf("registering mux handler: %w", err)
-    }
+	}
 
 	return mux, nil
 }
