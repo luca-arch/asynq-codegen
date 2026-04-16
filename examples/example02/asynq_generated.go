@@ -36,6 +36,41 @@ type asynqMux interface {
 // This type is auto-generated.
 type ExampleTaskProcessor = func(context.Context, *ExampleTask, map[string]string) error
 
+// Dispatcher defines methods to enqueue messages, using the already exported Enqueue* methods.
+//
+// This type is auto-generated.
+type Dispatcher struct {
+	Client asynqClient
+}
+
+// EnqueueExampleTask invokes [EnqueueExampleTask].
+//
+// This method is auto-generated.
+func (d *Dispatcher) EnqueueExampleTask(message *ExampleTask, opts ...asynq.Option) (*asynq.Task, *asynq.TaskInfo, error) {
+	return EnqueueExampleTask(d.Client, message, opts...)
+}
+
+// EnqueueExampleTaskContext invokes [EnqueueExampleTaskContext].
+//
+// This method is auto-generated.
+func (d *Dispatcher) EnqueueExampleTaskContext(ctx context.Context, message *ExampleTask, opts ...asynq.Option) (*asynq.Task, *asynq.TaskInfo, error) {
+	return EnqueueExampleTaskContext(ctx, d.Client, message, opts...)
+}
+
+// EnqueueExampleTaskContextWithHeaders invokes [EnqueueExampleTaskContextWithHeaders].
+//
+// This method is auto-generated.
+func (d *Dispatcher) EnqueueExampleTaskContextWithHeaders(ctx context.Context, message *ExampleTask, headers map[string]string, opts ...asynq.Option) (*asynq.Task, *asynq.TaskInfo, error) {
+	return EnqueueExampleTaskContextWithHeaders(ctx, d.Client, message, headers, opts...)
+}
+
+// EnqueueExampleTaskWithHeaders invokes a [EnqueueExampleTaskWithHeaders].
+//
+// This method is auto-generated.
+func (d *Dispatcher) EnqueueExampleTaskWithHeaders(message *ExampleTask, headers map[string]string, opts ...asynq.Option) (*asynq.Task, *asynq.TaskInfo, error) {
+	return EnqueueExampleTaskWithHeaders(d.Client, message, headers, opts...)
+}
+
 // Processors defines methods to process messages by their type.
 //
 // This type is auto-generated.
@@ -65,19 +100,66 @@ func (p *Processors) HandleAll(mux asynqMux) error {
 	return nil
 }
 
-// Run wires up a new [asynq.Server] with an [asynq.ServeMux] instantiated using the provided
+// NewServer wires up a new [asynq.Server] with an [asynq.ServeMux] instantiated using the provided
 // options and middlewares.
 //
+// It invokes [asynq.Server.Run] and returns any error.
+//
 // This function is auto-generated.
-func (p *Processors) Run(redisConnOpt asynq.RedisConnOpt, cfg asynq.Config, middlewares ...asynq.MiddlewareFunc) error {
+func (p *Processors) NewServer(redisConnOpt asynq.RedisConnOpt, cfg asynq.Config, middlewares ...asynq.MiddlewareFunc) (*asynq.Server, error) {
+	mux, err := p.NewServeMux(redisConnOpt, cfg, middlewares...)
+
+	if err != nil {
+		return nil, err
+	}
+
+	srv := asynq.NewServer(redisConnOpt, cfg)
+
+	if err := srv.Run(mux); err != nil {
+		return nil, fmt.Errorf("starting asynq server: %w", err)
+	}
+
+	return srv, nil
+}
+
+// NewServeMux wires up a new [asynq.ServeMux] with the provided middlewares and handlers.
+//
+// This function is auto-generated.
+func (p *Processors) NewServeMux(redisConnOpt asynq.RedisConnOpt, cfg asynq.Config, middlewares ...asynq.MiddlewareFunc) (*asynq.ServeMux, error) {
 	mux := asynq.NewServeMux()
 	mux.Use(middlewares...)
 
 	if err := p.HandleAll(mux); err != nil {
-		return fmt.Errorf("registering mux handler: %w", err)
+		return nil, fmt.Errorf("registering mux handler: %w", err)
 	}
 
-	return asynq.NewServer(redisConnOpt, cfg).Run(mux)
+	return mux, nil
+}
+
+// Run calls [Processors.NewServer] and waits for the context to be done before stopping and
+// shutting down the server.
+//
+// Note that [asynq.Server] automatically stops or shuts down depending on OS signals according
+// to [asynq documentation], so the context passed to this function must be cancelled explicitly,
+// (e.g.: signal.NotifyContext, errgroup.WithContext, and testing.T.Context are ok, but
+// context.Background is not).
+//
+// This function is auto-generated.
+//
+// [asynq documentation]: https://github.com/hibiken/asynq/wiki/Signals
+func (p *Processors) Run(ctx context.Context, redisConnOpt asynq.RedisConnOpt, cfg asynq.Config, middlewares ...asynq.MiddlewareFunc) error {
+	srv, err := p.NewServer(redisConnOpt, cfg, middlewares...)
+
+	if err != nil {
+		return err
+	}
+
+	<-ctx.Done()
+
+	srv.Stop()
+	srv.Shutdown()
+
+	return nil
 }
 
 // NewExampleTaskFromJSON consumes a JSON input and returns a [ExampleTask].

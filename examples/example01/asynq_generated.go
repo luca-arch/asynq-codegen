@@ -43,6 +43,69 @@ type SendEmailProcessor = func(context.Context, *SendEmail, map[string]string) e
 // This type is auto-generated.
 type SendSMSProcessor = func(context.Context, *SendSMS, map[string]string) error
 
+// Dispatcher defines methods to enqueue messages, using the already exported Enqueue* methods.
+//
+// This type is auto-generated.
+type Dispatcher struct {
+	Client asynqClient
+}
+
+// EnqueueSendEmail invokes [EnqueueSendEmail].
+//
+// This method is auto-generated.
+func (d *Dispatcher) EnqueueSendEmail(message *SendEmail, opts ...asynq.Option) (*asynq.Task, *asynq.TaskInfo, error) {
+	return EnqueueSendEmail(d.Client, message, opts...)
+}
+
+// EnqueueSendEmailContext invokes [EnqueueSendEmailContext].
+//
+// This method is auto-generated.
+func (d *Dispatcher) EnqueueSendEmailContext(ctx context.Context, message *SendEmail, opts ...asynq.Option) (*asynq.Task, *asynq.TaskInfo, error) {
+	return EnqueueSendEmailContext(ctx, d.Client, message, opts...)
+}
+
+// EnqueueSendEmailContextWithHeaders invokes [EnqueueSendEmailContextWithHeaders].
+//
+// This method is auto-generated.
+func (d *Dispatcher) EnqueueSendEmailContextWithHeaders(ctx context.Context, message *SendEmail, headers map[string]string, opts ...asynq.Option) (*asynq.Task, *asynq.TaskInfo, error) {
+	return EnqueueSendEmailContextWithHeaders(ctx, d.Client, message, headers, opts...)
+}
+
+// EnqueueSendEmailWithHeaders invokes a [EnqueueSendEmailWithHeaders].
+//
+// This method is auto-generated.
+func (d *Dispatcher) EnqueueSendEmailWithHeaders(message *SendEmail, headers map[string]string, opts ...asynq.Option) (*asynq.Task, *asynq.TaskInfo, error) {
+	return EnqueueSendEmailWithHeaders(d.Client, message, headers, opts...)
+}
+
+// EnqueueSendSMS invokes [EnqueueSendSMS].
+//
+// This method is auto-generated.
+func (d *Dispatcher) EnqueueSendSMS(message *SendSMS, opts ...asynq.Option) (*asynq.Task, *asynq.TaskInfo, error) {
+	return EnqueueSendSMS(d.Client, message, opts...)
+}
+
+// EnqueueSendSMSContext invokes [EnqueueSendSMSContext].
+//
+// This method is auto-generated.
+func (d *Dispatcher) EnqueueSendSMSContext(ctx context.Context, message *SendSMS, opts ...asynq.Option) (*asynq.Task, *asynq.TaskInfo, error) {
+	return EnqueueSendSMSContext(ctx, d.Client, message, opts...)
+}
+
+// EnqueueSendSMSContextWithHeaders invokes [EnqueueSendSMSContextWithHeaders].
+//
+// This method is auto-generated.
+func (d *Dispatcher) EnqueueSendSMSContextWithHeaders(ctx context.Context, message *SendSMS, headers map[string]string, opts ...asynq.Option) (*asynq.Task, *asynq.TaskInfo, error) {
+	return EnqueueSendSMSContextWithHeaders(ctx, d.Client, message, headers, opts...)
+}
+
+// EnqueueSendSMSWithHeaders invokes a [EnqueueSendSMSWithHeaders].
+//
+// This method is auto-generated.
+func (d *Dispatcher) EnqueueSendSMSWithHeaders(message *SendSMS, headers map[string]string, opts ...asynq.Option) (*asynq.Task, *asynq.TaskInfo, error) {
+	return EnqueueSendSMSWithHeaders(d.Client, message, headers, opts...)
+}
+
 // Processors defines methods to process messages by their type.
 //
 // This type is auto-generated.
@@ -83,19 +146,66 @@ func (p *Processors) HandleAll(mux asynqMux) error {
 	return nil
 }
 
-// Run wires up a new [asynq.Server] with an [asynq.ServeMux] instantiated using the provided
+// NewServer wires up a new [asynq.Server] with an [asynq.ServeMux] instantiated using the provided
 // options and middlewares.
 //
+// It invokes [asynq.Server.Run] and returns any error.
+//
 // This function is auto-generated.
-func (p *Processors) Run(redisConnOpt asynq.RedisConnOpt, cfg asynq.Config, middlewares ...asynq.MiddlewareFunc) error {
+func (p *Processors) NewServer(redisConnOpt asynq.RedisConnOpt, cfg asynq.Config, middlewares ...asynq.MiddlewareFunc) (*asynq.Server, error) {
+	mux, err := p.NewServeMux(redisConnOpt, cfg, middlewares...)
+
+	if err != nil {
+		return nil, err
+	}
+
+	srv := asynq.NewServer(redisConnOpt, cfg)
+
+	if err := srv.Run(mux); err != nil {
+		return nil, fmt.Errorf("starting asynq server: %w", err)
+	}
+
+	return srv, nil
+}
+
+// NewServeMux wires up a new [asynq.ServeMux] with the provided middlewares and handlers.
+//
+// This function is auto-generated.
+func (p *Processors) NewServeMux(redisConnOpt asynq.RedisConnOpt, cfg asynq.Config, middlewares ...asynq.MiddlewareFunc) (*asynq.ServeMux, error) {
 	mux := asynq.NewServeMux()
 	mux.Use(middlewares...)
 
 	if err := p.HandleAll(mux); err != nil {
-		return fmt.Errorf("registering mux handler: %w", err)
+		return nil, fmt.Errorf("registering mux handler: %w", err)
 	}
 
-	return asynq.NewServer(redisConnOpt, cfg).Run(mux)
+	return mux, nil
+}
+
+// Run calls [Processors.NewServer] and waits for the context to be done before stopping and
+// shutting down the server.
+//
+// Note that [asynq.Server] automatically stops or shuts down depending on OS signals according
+// to [asynq documentation], so the context passed to this function must be cancelled explicitly,
+// (e.g.: signal.NotifyContext, errgroup.WithContext, and testing.T.Context are ok, but
+// context.Background is not).
+//
+// This function is auto-generated.
+//
+// [asynq documentation]: https://github.com/hibiken/asynq/wiki/Signals
+func (p *Processors) Run(ctx context.Context, redisConnOpt asynq.RedisConnOpt, cfg asynq.Config, middlewares ...asynq.MiddlewareFunc) error {
+	srv, err := p.NewServer(redisConnOpt, cfg, middlewares...)
+
+	if err != nil {
+		return err
+	}
+
+	<-ctx.Done()
+
+	srv.Stop()
+	srv.Shutdown()
+
+	return nil
 }
 
 // NewSendEmailFromJSON consumes a JSON input and returns a [SendEmail].
