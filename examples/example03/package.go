@@ -94,13 +94,18 @@ func Producer(ctx context.Context) error {
 }
 
 func main() {
-	var err error
+	var (
+		ctx, cancel = context.WithTimeout(context.Background(), time.Minute)
+		err         error
+	)
+
+	defer cancel()
 
 	switch os.Args[1] {
 	case "consumer":
-		err = Consumer(context.Background())
+		err = Consumer(ctx)
 	case "producer":
-		err = Producer(context.Background())
+		err = Producer(ctx)
 	}
 
 	if err != nil {
