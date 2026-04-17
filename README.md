@@ -159,7 +159,7 @@ if err := processors.Run(
 
 ### For more granular control
 
-The `Run` method calls `NewServer` and `NewServeMux` under the hood (both methods are exported).
+The `Run` method calls `NewServeMux` and `HandleAll` under the hood (both methods are exported).
 
 `Processors` can be registered as handlers to `asynq.ServeMux` in a more verbose way:
 

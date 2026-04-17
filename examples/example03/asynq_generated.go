@@ -146,32 +146,11 @@ func (p *Processors) HandleAll(mux asynqMux) error {
 	return nil
 }
 
-// NewServer wires up a new [asynq.Server] with an [asynq.ServeMux] instantiated using the provided
-// options and middlewares.
-//
-// It invokes [asynq.Server.Run] and returns any error.
+// NewServeMux wires up a new [asynq.ServeMux] with the provided middlewares and the [Processors]
+// handlers.
 //
 // This function is auto-generated.
-func (p *Processors) NewServer(redisConnOpt asynq.RedisConnOpt, cfg asynq.Config, middlewares ...asynq.MiddlewareFunc) (*asynq.Server, error) {
-	mux, err := p.NewServeMux(redisConnOpt, cfg, middlewares...)
-
-	if err != nil {
-		return nil, err
-	}
-
-	srv := asynq.NewServer(redisConnOpt, cfg)
-
-	if err := srv.Run(mux); err != nil {
-		return nil, fmt.Errorf("starting asynq server: %w", err)
-	}
-
-	return srv, nil
-}
-
-// NewServeMux wires up a new [asynq.ServeMux] with the provided middlewares and handlers.
-//
-// This function is auto-generated.
-func (p *Processors) NewServeMux(redisConnOpt asynq.RedisConnOpt, cfg asynq.Config, middlewares ...asynq.MiddlewareFunc) (*asynq.ServeMux, error) {
+func (p *Processors) NewServeMux(middlewares ...asynq.MiddlewareFunc) (*asynq.ServeMux, error) {
 	mux := asynq.NewServeMux()
 	mux.Use(middlewares...)
 
@@ -182,8 +161,8 @@ func (p *Processors) NewServeMux(redisConnOpt asynq.RedisConnOpt, cfg asynq.Conf
 	return mux, nil
 }
 
-// Run calls [Processors.NewServer] and waits for the context to be done before stopping and
-// shutting down the server.
+// Run invokes [Processors.NewServeMux], [asynq.Server.Run], and returns any error. It waits for
+// the context to be done before stopping and shutting down the server.
 //
 // Note that [asynq.Server] automatically stops or shuts down depending on OS signals according
 // to [asynq documentation], so the context passed to this function must be cancelled explicitly,
@@ -194,18 +173,32 @@ func (p *Processors) NewServeMux(redisConnOpt asynq.RedisConnOpt, cfg asynq.Conf
 //
 // [asynq documentation]: https://github.com/hibiken/asynq/wiki/Signals
 func (p *Processors) Run(ctx context.Context, redisConnOpt asynq.RedisConnOpt, cfg asynq.Config, middlewares ...asynq.MiddlewareFunc) error {
-	srv, err := p.NewServer(redisConnOpt, cfg, middlewares...)
-
+	mux, err := p.NewServeMux(middlewares...)
 	if err != nil {
 		return err
 	}
 
-	<-ctx.Done()
+	out := make(chan error, 1)
+	srv := asynq.NewServer(redisConnOpt, cfg)
 
-	srv.Stop()
-	srv.Shutdown()
+	go func() {
+		if err := srv.Run(mux); err != nil {
+			out <- fmt.Errorf("starting asynq server: %w", err)
+		}
 
-	return nil
+		out <- nil
+	}()
+
+	go func() {
+		<-ctx.Done()
+
+		srv.Stop()
+		srv.Shutdown()
+
+		out <- nil
+	}()
+
+	return <-out
 }
 
 // NewTask01FromJSON consumes a JSON input and returns a [Task01].
