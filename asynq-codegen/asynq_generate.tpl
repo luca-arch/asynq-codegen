@@ -132,46 +132,32 @@ func (p *Processors) NewServeMux(middlewares ...asynq.MiddlewareFunc) (*asynq.Se
 	return mux, nil
 }
 
-// Run invokes [Processors.NewServeMux], [asynq.Server.Run], and returns any error. It waits for
-// the context to be done before stopping and shutting down the server.
+// Run invokes [Processors.NewServeMux], [asynq.Server.Start], and returns any error encountered by
+// either method. It then waits for the context to be done before stopping and shutting down the
+// server.
 //
-// Note that [asynq.Server] automatically stops or shuts down depending on OS signals according
-// to [asynq documentation], so the context passed to this function must be cancelled explicitly,
-// (e.g.: signal.NotifyContext, errgroup.WithContext, and testing.T.Context are ok, but
-// context.Background is not).
+// Note the context passed to this method must be cancelled explicitly (e.g.: signal.NotifyContext,
+// errgroup.WithContext, or testing.T.Context) for the method to return.
 //
 // This function is auto-generated.
-//
-// [asynq documentation]: https://github.com/hibiken/asynq/wiki/Signals
 func (p *Processors) Run(ctx context.Context, redisConnOpt asynq.RedisConnOpt, cfg asynq.Config, middlewares ...asynq.MiddlewareFunc) error {
 	mux, err := p.NewServeMux(middlewares...)
 	if err != nil {
 		return err
 	}
 
-	out := make(chan error, 1)
 	srv := asynq.NewServer(redisConnOpt, cfg)
 
-	go func() {
-		if err := srv.Run(mux); err != nil {
-			out <- fmt.Errorf("starting asynq server: %w", err)
+    if err := srv.Start(mux); err != nil {
+        return err
 		}
 
-		out <- nil
-	}()
-
-	go func() {
 		<-ctx.Done()
 
 		srv.Stop()
 		srv.Shutdown()
 
-		out <- nil
-	}()
-
-	defer close(out)
-
-	return <-out
+    return nil
 }
 
 {{/* Tasks factories */}}
