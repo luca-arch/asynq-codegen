@@ -181,6 +181,10 @@ func NewAsynqComment(doc *ast.CommentGroup, pkgName, structName string) (*AsynqC
 		attrs[k] = v
 	}
 
+	if len(attrs) == 0 {
+		return nil, errNoDirective
+	}
+
 	return &AsynqComment{
 		Attributes:  attrs,
 		PackageName: pkgName,
